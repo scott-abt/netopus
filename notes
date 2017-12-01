@@ -1,0 +1,7 @@
+Investigate tools that already do things you want, like:
+
+Rancid - config diff/backup
+paramiko/netmiko - connect to network devices w/ python
+Ansible - push configs & monitor compliance/state
+
+
