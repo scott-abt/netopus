@@ -12,8 +12,12 @@ def check_for_ssh(network_list):
     # Work through the range testing for tcp/22 access
     # Return a list of IP's with access or "none".
     for line in network_list:
-        # Need to break up networks and try each node.
-        _network = netaddr.IPNetwork(line.rstrip())
+        try:
+            _network = netaddr.IPNetwork(line.rstrip())
+        except netaddr.core.AddrFormatError as notIp:
+            # The line contained something other than an ip or CIDR formatted address
+            print("WARNING: " + str(notIp))
+            continue
         for address in _network.iter_hosts():
             try:
                 print("Trying " + str(address))
