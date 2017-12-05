@@ -8,7 +8,7 @@ Do additional scan to find out if it's actually a network switch.
 Populate a database with IP addresses (perhaps other metadata) of extant switches.
 '''
 
-def check_for_ssh(network_list):
+def check_for_method(network_list):
     # Work through the range testing for tcp/22 access
     # Return a list of IP's with access or "none".
     for line in network_list:
@@ -20,15 +20,23 @@ def check_for_ssh(network_list):
             continue
         for address in _network.iter_hosts():
             try:
-                print("Trying " + str(address))
-                sock = socket.create_connection((str(address), '22'), timeout=3)
+                ssh_sock = socket.create_connection((str(address), '22'), timeout=1)
+                print(str(address) + " ssh")
             except socket.timeout as timeout:
-                print("Connection to " + str(address) + " timed out.")
+                continue
+            except OSError:#This means the system rejected a connection to tcp/22
+                try:
+                    telnet_sock = socket.create_connection((str(address), '23'), timeout=1)
+                    print(str(address) + " telnet")
+                except socket.timeout:
+                    continue
+            except Exception as e:
+                print(e)
 
 def main():
     network_list = open('networks.csv', 'r')
     # Each line is a network in CIDR format or a single IP address.
-    ssh_ips = check_for_ssh(network_list)
+    host_methods = check_for_method(network_list)
 
 if __name__ == "__main__":
     main()
