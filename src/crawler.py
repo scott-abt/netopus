@@ -2,6 +2,8 @@
 import socket
 import netaddr
 import sqlite3
+import getpass
+from paramiko.client import SSHClient
 
 '''
 Given a list of networks or IP's find any network devices with open SSH or Telnet ports.
@@ -9,23 +11,55 @@ Do additional scan to find out if it's actually a network switch.
 Populate a database with IP addresses (perhaps other metadata) of extant switches.
 '''
 
-def check_existing(addy, port):
+def get_cursor():
     try:
         _conn = sqlite3.connect("live_hosts.db")
         _curs = _conn.cursor()
-        _curs.execute("SELECT COUNT(*) FROM hosts WHERE address = '%s'" % addy)
+        return(_curs)
+    except Exception as e:
+        print(e)
+
+def get_metadata(addy, port):
+    try:
+        _curs = get_cursor()
+        _result = _curs.execute("SELECT hostname, method FROM hosts WHERE address = '{}' AND active = 1".format(addy))
+        _row = _result.fetchone()
+        return(_row)
+    except Exception as e:
+        print(e)
+
+def connect_to_ssh(addy):
+    username = input("Username: ")
+    password = getpass.getpass()
+    ''' do a session and get info'''
+    
+def check_existing(addy, port):
+    try:
+        _curs = get_cursor()
+        _curs.execute("SELECT COUNT(*) FROM hosts WHERE address = '{}' AND active = '1'".format(addy))
 
         if _curs.fetchone()[0] > 0:
-            #update the last seen and make sure the method is correct
+            '''There is an existing row for this IP.
+            * update the last seen, configured device hostname (not the resolved dns)
+            * make sure the method is correct.
+            '''
+            hostname, method = get_metadata(addy, port)
+            '''
+            Connect to the device with paramiko
+            compare metadata with configured hostname
+            '''
+            if method == 'ssh':
+                connect_to_ssh(addy)
+            else:
+                print("Do a telnet instead")
             return 1
         else:
             #insert new row
             return 0
     except Exception as e:
         print(e)
-        continue
 
-def check_for_method(network_list):
+def crawl(network_list):
     # Work through the range testing for tcp/22 access
     # Return a list of IP's with access or "none".
     for line in network_list:
@@ -39,14 +73,12 @@ def check_for_method(network_list):
             try:
                 ssh_sock = socket.create_connection((str(address), '22'), timeout=1)
                 exists = check_existing(address, 22)
-                print(exists)
             except socket.timeout as timeout:
                 continue
             except OSError:#This means the system rejected a connection to tcp/22
                 try:
                     telnet_sock = socket.create_connection((str(address), '23'), timeout=1)
                     exists = check_existing(address, 23)
-                    print(exists)
                 except socket.timeout:
                     continue
             except Exception as e:
@@ -55,7 +87,7 @@ def check_for_method(network_list):
 def main():
     network_list = open('networks.csv', 'r')
     # Each line is a network in CIDR format or a single IP address.
-    host_methods = check_for_method(network_list)
+    crawl(network_list)
 
 if __name__ == "__main__":
     main()
