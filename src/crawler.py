@@ -3,7 +3,7 @@ import socket
 import netaddr
 import sqlite3
 import getpass
-from paramiko.client import SSHClient
+from paramiko.client import SSHClient, AutoAddPolicy
 
 '''
 Given a list of networks or IP's find any network devices with open SSH or Telnet ports.
@@ -22,7 +22,7 @@ def get_cursor():
 def get_metadata(addy, port):
     try:
         _curs = get_cursor()
-        _result = _curs.execute("SELECT hostname, method FROM hosts WHERE address = '{}' AND active = 1".format(addy))
+        _result = _curs.execute("SELECT hostname, method FROM hosts WHERE address = '{}' AND active = '1'".format(addy))
         _row = _result.fetchone()
         return(_row)
     except Exception as e:
@@ -32,6 +32,13 @@ def connect_to_ssh(addy):
     username = input("Username: ")
     password = getpass.getpass()
     ''' do a session and get info'''
+    client = SSHClient()
+    client.set_missing_host_key_policy(AutoAddPolicy)
+    client.connect(str(addy), 22, username=username, password=password)
+    output = client.exec_command('show configuration|no-more')
+    config = output[1].readlines()
+    #Works for juniper... don't print it, save to file after diff
+    print(config)
     
 def check_existing(addy, port):
     try:
