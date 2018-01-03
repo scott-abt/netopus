@@ -28,6 +28,13 @@ def get_metadata(addy, port):
     except Exception as e:
         print(e)
 
+def compare_config(config, addy):
+    config_file = open(str(addy) + '.cfg', 'w')
+    for line in config:
+        config_file.write(line)
+    config_file.close()
+    # This works, but need to use version control for versioning now
+
 def connect_to_ssh(addy):
     username = input("Username: ")
     password = getpass.getpass()
@@ -38,7 +45,7 @@ def connect_to_ssh(addy):
     output = client.exec_command('show configuration|no-more')
     config = output[1].readlines()
     #Works for juniper... don't print it, save to file after diff
-    print(config)
+    compare_config(config, addy)
     
 def check_existing(addy, port):
     try:
